@@ -11,8 +11,8 @@ use crate::PieceType::Pawn;
 
 use crate::Color::White;
 use crate::Color::Black;
-// Signed integers for easy distance computation, not meant to ever hold negative values
 
+// Signed integers for easy distance computation, not meant to ever hold negative values
 #[derive(Eq, PartialEq)]
 #[derive(Copy, Clone)]
 struct Coord {x: i8, y: i8} 
@@ -34,11 +34,17 @@ enum Color {
 enum PieceType {
     King,
     Queen,
-    Knight,
-    Bishop,
-    Pawn,
     Rook,
+    Bishop,
+    Knight,
+    Pawn,
     Empty, //Used for empty spaces on the board
+}
+
+#[derive(Eq, PartialEq)]
+#[derive(Copy, Clone)]
+enum Operation {
+    Move(PieceType, Coord),
 }
 
 struct Piece {
@@ -115,11 +121,10 @@ impl Piece{
 
     //Done
     // Actually moves the piece (doesn't perform any checks)
-    fn move_to(&mut self, target: &Coord, board: &mut Board) -> Result<(), String> {
+    fn move_to(&mut self, target: &Coord, board: &mut Board) {
         board.change(&self.pos, &PieceType::Empty, &self.color);
         board.change(target, &self.kind, &self.color);
         self.pos = *target;
-        Ok(())
     }
 }
 
@@ -134,6 +139,89 @@ impl Board {
         self.board[pos.x as usize][pos.y as usize] = (*new, *color);
     }
 
+    // TODO
+    fn process(&mut self, operation: Operation) {
+        board.display(
+            match operation {
+                Operation::Move(piecetype, target) => {
+                    let mut valids: Vec<&Piece> = vec![];
+                    let mut invalids: Vec<Resut<(), String>> = vec![]; 
+                    for piece in &mut self.pieces() {
+                        if piecetype == piece.kind {
+                            if let Err(msg) = piece.can_move() {invalids.push(Err(msg));}
+                            else {valids.push(&mut piece);}
+                        }
+                    }
+
+                    if valids.len() > 1 {Err("Specify the piece you want to move")}
+                    else {if invalids.len() == 1 {invalids[0]}}
+                    else {valids[0].move_to(target, &mut self)}
+                }
+            }
+        )
+    }
+
+    // TODO Partially Done
+    fn display(&self, result: Result<(), String>) {
+        let top_left = '\u{250c}';
+        let horizontal = '\u{2500}';
+        let horizontal_top = '\u{252c}';
+        let top_right = '\u{2510}';
+        let vertical = '\u{2502}';
+        let four_way = '\u{253c}';
+        let vertical_left = '\u{251c}';
+        let vertical_rigt = '\u{2524}';
+        let bottom_left = '\u{2514}';
+        let horizontal_bottom = '\u{2534}'; 
+        let bottom_right = '\u{2518}';
+
+        print!("{top_left}");
+        for i in 0..12 {
+            if i % 2 {print!("{horizontal_top}")}
+            else {print!("{horizontal}")}
+        }
+        print!("{top_right}\n");
+
+        
+        for i in 0..8 {
+            if i != 0 && i != 8 {
+                print!("{vertical_left}");
+                for i in 0..12 {
+                    if i % 2 {print!("{horizontal}")}
+                    else {print!("{four_way}")} 
+                }
+                print!("{vertical_right}\n");
+            }
+
+            print!("{vertical}");
+            for j in 0..8{
+                let mut piece: usize = 2654; // White king
+                let (kind, color) = self.board[8-i][j];
+                if let Empty = kind {
+                    piece = 20; // Space
+                } else {
+                    // Uses the order of the pieceType enum and the Unicode characters
+                    piece += kind as usize;
+                    // Uses the order of the Color enum and and the Unicode characters
+                    piece += color as usize * 6;
+
+                    print!('\u{piece}');
+                    print!("{vertical}");
+                }
+            }
+        }
+
+        print!("{bottom_left}");
+        for i in 0..12 {
+            if i % 2 {print!("{horizontal_bottom}")}
+            else {print!("{horizontal}")}
+        }
+        print!("{bottom_right}\n");
+
+        if let Err(msg) = result {print!(msg)}
+    }
+
+    // Done
     fn new() -> Self {
         // Inverted over the Y axis
         let board: [[(PieceType, Color); 8]; 8] = [
@@ -174,7 +262,8 @@ impl Board {
 }
 
 fn main() {
-    let board = Board::new();
+    let mut board = Board::new();
 
-
+    board.display(Ok(()));
+    board,process(Operation::Move(Pawn, Coor{x: 5, y:1}));
 }
